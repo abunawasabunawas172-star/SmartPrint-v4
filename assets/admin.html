@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>SmartPrint — Admin Dashboard</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="admin-header">
+    <div class="header-content">
+      <div class="header-brand">
+        <span class="brand-icon">⚡</span>
+        <div class="brand-text">
+          <h1>Admin Dashboard</h1>
+          <p>SmartPrint · Real-time</p>
+        </div>
+      </div>
+      <div class="header-status" id="connection-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Memeriksa...</span>
+      </div>
+      <button class="btn-logout" onclick="logoutAdmin()">🚪 Logout</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="admin-container">
+    <!-- Sidebar Stats -->
+    <aside class="admin-sidebar">
+      <div class="stat-card">
+        <div class="stat-label">Total Pesanan</div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-total"></div></div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Selesai</div>
+        <div class="stat-value" id="stat-done">0</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-done"></div></div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" id="stat-pending">0</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-pending"></div></div>
+      </div>
+      <div class="stat-card info">
+        <div class="stat-label">Mencetak</div>
+        <div class="stat-value" id="stat-printing">0</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-printing"></div></div>
+      </div>
+
+      <!-- Revenue Section -->
+      <div class="revenue-card">
+        <div class="revenue-label">💰 Total Pendapatan</div>
+        <div class="revenue-amount" id="revenue-total">Rp 0</div>
+        <div class="revenue-subtitle" id="revenue-subtitle">Memuat data...</div>
+      </div>
+
+      <!-- Action Buttons -->
+      <button class="btn-action" onclick="loadOrders()">
+        <span>🔄</span>
+        <span>Refresh</span>
+      </button>
+      <button class="btn-action secondary" onclick="closeAdmin()">
+        <span>✕</span>
+        <span>Tutup</span>
+      </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-content">
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('orders', this)">📋 Pesanan</button>
+        <button class="tab-btn" onclick="switchTab('pesan', this)">💬 Pesan</button>
+        <button class="tab-btn" onclick="switchTab('revenue', this)">📊 Pendapatan</button>
+      </div>
+
+      <!-- Orders Tab -->
+      <div id="orders-tab" class="tab-content active">
+        <!-- Search and Filter -->
+        <div class="filter-bar">
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Cari Order ID, pelanggan, atau nomor WA..."
+            class="search-input"
+          >
+          <select id="status-filter" class="status-filter">
+            <option value="all">Semua Status</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Konfirmasi</option>
+            <option value="printing">Mencetak</option>
+            <option value="done">Selesai</option>
+            <option value="cancelled">Dibatalkan</option>
+          </select>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="table-wrapper">
+          <table class="orders-table" id="orders-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Pelanggan</th>
+                <th>No. WA</th>
+                <th>File</th>
+                <th>Halaman</th>
+                <th>Total</th>
+                <th>Lokasi</th>
+                <th>Status</th>
+                <th>Tanggal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="orders-body">
+              <tr><td colspan="10" class="empty-message">⏳ Memuat pesanan...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+          <div>📭 Belum ada pesanan</div>
+        </div>
+      </div>
+
+      <!-- Pesan Tab -->
+      <div id="pesan-tab" class="tab-content" style="display: none;">
+        <div class="message-section">
+          <h3>📤 Kirim Notifikasi ke Pelanggan</h3>
+          <div class="message-form">
+            <input 
+              type="tel" 
+              id="notif-wa" 
+              placeholder="No. WhatsApp (62...)"
+              class="form-input"
+            >
+            <input 
+              type="text" 
+              id="notif-order-id" 
+              placeholder="ID Pesanan (SP-XXXX)"
+              class="form-input"
+            >
+            <div class="button-group">
+              <button class="status-btn confirmed" onclick="sendNotification('confirmed')">✅ Konfirmasi</button>
+              <button class="status-btn printing" onclick="sendNotification('printing')">🖨️ Cetak</button>
+              <button class="status-btn done" onclick="sendNotification('done')">🎉 Selesai</button>
+            </div>
+            <textarea 
+              id="custom-message" 
+              placeholder="Atau ketik pesan custom..."
+              class="form-textarea" 
+              rows="3"
+            ></textarea>
+            <button class="btn-send" onclick="sendCustomMessage()">📱 Kirim via WhatsApp</button>
+          </div>
+        </div>
+
+        <!-- Message History -->
+        <div class="message-section">
+          <h3>📥 Riwayat Pesan Masuk</h3>
+          <div id="message-list" class="message-list">
+            <div class="empty-message">📭 Belum ada pesan masuk</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Revenue Tab -->
+      <div id="revenue-tab" class="tab-content" style="display: none;">
+        <div class="revenue-stats">
+          <div class="revenue-stat-card">
+            <div class="revenue-stat-label">Hari Ini</div>
+            <div class="revenue-stat-value" id="rev-today">Rp 0</div>
+          </div>
+          <div class="revenue-stat-card">
+            <div class="revenue-stat-label">Minggu Ini</div>
+            <div class="revenue-stat-value" id="rev-week">Rp 0</div>
+          </div>
+          <div class="revenue-stat-card">
+            <div class="revenue-stat-label">Bulan Ini</div>
+            <div class="revenue-stat-value" id="rev-month">Rp 0</div>
+          </div>
+          <div class="revenue-stat-card">
+            <div class="revenue-stat-label">Rata-rata per Pesanan</div>
+            <div class="revenue-stat-value" id="rev-average">Rp 0</div>
+          </div>
+        </div>
+
+        <!-- Revenue Chart Placeholder -->
+        <div class="chart-container">
+          <canvas id="revenue-chart"></canvas>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Scripts -->
+  <script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPrint - Lokasi Printer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .location-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .register-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .register-form h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Kembali ke Halaman Utama</a>
+    <h1>SmartPrint - Pilih Lokasi Printer</h1>
+    <select id="lokasi">
+        <option>Loading...</option>
+    </select>
+    <div id="location-info" class="location-info">
+        Pilih lokasi untuk melihat detail.
+    </div>
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div class="register-form">
+        <h2>Daftarkan Lokasi Printer Baru</h2>
+        <p>Jika Anda memiliki tempat printer yang belum terdaftar, daftarkan di sini agar bisa digunakan oleh pelanggan SmartPrint.</p>
+        <input type="text" id="new-name" placeholder="Nama Lokasi (contoh: Gedung A Lt.1)" required>
+        <input type="text" id="new-city" placeholder="Kota (contoh: Jakarta)" required>
+        <button onclick="registerLocation()">Daftarkan Lokasi</button>
+        <div id="register-message" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Supabase initialization
+        const supabaseUrl = 'https://vapixsmaytuvvvvzcpou.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhcGl4c21heXR1dnZ2dnpjcG91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NjA4NzMsImV4cCI6MjA4ODIzNjg3M30.c8JQsuSK84rfb9bNxvmQp658-9CPXA-ClDmc4TynZHU';
+        const { createClient } = supabase;
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        // Function to fetch and display locations
+        async function fetchLocations() {
+            const select = document.getElementById('lokasi');
+            const errorDiv = document.getElementById('error');
+
+            try {
+                // Clear previous options and show loading
+                select.innerHTML = '<option>Loading...</option>';
+                errorDiv.style.display = 'none';
+
+                // Fetch data from print_locations table
+                const { data, error } = await supabaseClient
+                    .from('print_locations')
+                    .select('*');
+
+                if (error) {
+                    throw error;
+                }
+
+                // Clear dropdown before inserting new data
+                select.innerHTML = '<option value="">Pilih lokasi printer...</option>';
+
+                // Handle empty data case
+                if (!data || data.length === 0) {
+                    select.innerHTML = '<option>No locations available</option>';
+                    return;
+                }
+
+                // Populate dropdown with name - city format
+                data.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location.id || location.name;
+                    option.textContent = `${location.name} - ${location.city}`;
+                    select.appendChild(option);
+                });
+
+            } catch (err) {
+                // Log error to console
+                console.error('Error fetching locations:', err);
+                // Display error message
+                errorDiv.textContent = 'Failed to load locations. Please check your connection and try again.';
+                errorDiv.style.display = 'block';
+                // Show error in dropdown
+                select.innerHTML = '<option>Error loading locations</option>';
+            }
+        }
+
+        // Function to update location info
+        function updateLocationInfo() {
+            const select = document.getElementById('lokasi');
+            const infoDiv = document.getElementById('location-info');
+            const selectedValue = select.value;
+
+            if (!selectedValue) {
+                infoDiv.innerHTML = 'Pilih lokasi untuk melihat detail.';
+                return;
+            }
+
+            // For now, show basic info. In a real app, you might fetch more details
+            const selectedOption = select.options[select.selectedIndex];
+            infoDiv.innerHTML = `
+                <h3>${selectedOption.textContent}</h3>
+                <p>Lokasi printer yang dipilih: ${selectedOption.textContent}</p>
+                <p>Silakan kembali ke halaman utama untuk melanjutkan pemesanan cetak.</p>
+            `;
+        }
+
+        // Event listener for select change
+        document.getElementById('lokasi').addEventListener('change', updateLocationInfo);
+
+        // Function to register new location
+        async function registerLocation() {
+            const nameInput = document.getElementById('new-name');
+            const cityInput = document.getElementById('new-city');
+            const messageDiv = document.getElementById('register-message');
+
+            const name = nameInput.value.trim();
+            const city = cityInput.value.trim();
+
+            if (!name || !city) {
+                messageDiv.className = 'error';
+                messageDiv.textContent = 'Harap isi semua field.';
+                messageDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                messageDiv.style.display = 'none';
+
+                const { data, error } = await supabaseClient
+                    .from('print_locations')
+                    .insert([{ name, city }]);
+
+                if (error) {
+                    throw error;
+                }
+
+                // Success
+                messageDiv.className = 'success';
+                messageDiv.textContent = 'Lokasi berhasil didaftarkan! Lokasi akan muncul di dropdown setelah refresh.';
+                messageDiv.style.display = 'block';
+
+                // Clear inputs
+                nameInput.value = '';
+                cityInput.value = '';
+
+                // Refresh locations
+                setTimeout(() => {
+                    fetchLocations();
+                }, 1000);
+
+            } catch (err) {
+                console.error('Error registering location:', err);
+                messageDiv.className = 'error';
+                messageDiv.textContent = 'Gagal mendaftarkan lokasi. Silakan coba lagi.';
+                messageDiv.style.display = 'block';
+            }
+        }
+
+        // Call the function to fetch locations
+        fetchLocations();
+    </script>
+</body>
+</html>

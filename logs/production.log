@@ -1,0 +1,4 @@
+2026-05-13 03:32:27,858 - INFO - [SMARTPRINT] Database initialized and verified.
+2026-05-13 03:32:27,908 - WARNING - [SMARTPRINT]  * Debugger is active!
+2026-05-13 03:32:27,911 - INFO - [SMARTPRINT]  * Debugger PIN: 697-432-537
+2026-05-13 03:33:50,123 - INFO - [SMARTPRINT]  * Detected change in 'D:\\SmartPrint\\main.py', reloading

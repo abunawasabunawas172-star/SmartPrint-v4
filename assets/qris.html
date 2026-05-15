@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>SmartPrint — Pembayaran QRIS</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAKICAGKICAKICAGKICAGKICAKICAGKICAGUKCICAGUKCICAGUKCI8L3N2Zz4=" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07080f;
+      --surf: #0f1018;
+      --surf2: #161820;
+      --accent: #00e5b4;
+      --accent-dim: rgba(0, 229, 180, 0.1);
+      --accent2: #6366f1;
+      --gold: #f59e0b;
+      --red: #f87171;
+      --text: #eef0f6;
+      --muted: #5a6278;
+      --border: rgba(255, 255, 255, 0.07);
+      --r: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "DM Sans", sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(7, 8, 15, 0.93);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .header-logo {
+      font-family: "Syne", sans-serif;
+      font-weight: 800;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-back {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 16px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      font-family: "DM Sans", sans-serif;
+    }
+
+    .header-back:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    /* Main container */
+    .container {
+      flex: 1;
+      padding: 40px 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .payment-card {
+      background: linear-gradient(135deg, var(--surf), rgba(0, 229, 180, 0.03));
+      border: 1px solid rgba(0, 229, 180, 0.15);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 12px 40px rgba(0, 229, 180, 0.1);
+    }
+
+    .payment-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .payment-label {
+      font-size: 0.7rem;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: block;
+      opacity: 0.9;
+    }
+
+    .payment-title {
+      font-family: "Syne", sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -1.2px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--text), rgba(232, 236, 244, 0.85));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 10px;
+      font-family: "DM Sans", sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      border-radius: 9px;
+    }
+
+    .tab-btn.active {
+      background: rgba(0, 229, 180, 0.1);
+      color: var(--accent);
+    }
+
+    .tab-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* QR Code section */
+    .qr-section {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 28px;
+      padding: 28px 24px;
+      text-align: center;
+      margin-bottom: 24px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+    }
+
+    .qr-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin-bottom: 16px;
+    }
+
+    .qr-box {
+      position: relative;
+      background: #fff;
+      border-radius: 28px;
+      padding: 20px;
+      width: fit-content;
+      margin: 0 auto 16px;
+      display: inline-block;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .qr-badge {
+      position: absolute;
+      left: 18px;
+      top: 18px;
+      background: #0f172a;
+      color: #eef0f6;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .qr-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.05);
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .qr-logo-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: #111827;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    .qr-logo-text {
+      text-align: left;
+      line-height: 1.1;
+    }
+
+    .qr-logo-title {
+      display: block;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+    }
+
+    .qr-logo-subtitle {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.75rem;
+      color: #475569;
+      letter-spacing: 0.04em;
+      font-weight: 500;
+    }
+
+    .qr-box img {
+      width: 232px;
+      height: 232px;
+      display: block;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid #d1d5db;
+    }
+
+    .qr-footer {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: #475569;
+      letter-spacing: 0.01em;
+    }
+
+    .qr-hint {
+      font-size: 0.73rem;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    /* Bank section */
+    .bank-section {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(0, 229, 180, 0.15);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .bank-field {
+      margin-bottom: 12px;
+    }
+
+    .bank-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      display: block;
+      font-weight: 600;
+    }
+
+    .bank-number-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .bank-number {
+      font-family: "Syne", sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .copy-btn {
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 9px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      font-family: "DM Sans", sans-serif;
+    }
+
+    .copy-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+
+    .copy-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Amount section */
+    .amount-section {
+      background: rgba(0, 229, 180, 0.08);
+      border: 1px solid rgba(0, 229, 180, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .amount-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 4px;
+    }
+
+    .amount-value {
+      font-family: "Syne", sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .amount-hint {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Payment methods */
+    .methods {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .method {
+      background: rgba(0, 229, 180, 0.06);
+      border: 1px solid rgba(0, 229, 180, 0.15);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 9px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .method:hover {
+      border-color: rgba(0, 229, 180, 0.3);
+      background: rgba(0, 229, 180, 0.12);
+    }
+
+    /* Countdown timer */
+    .countdown-box {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 11px;
+      padding: 12px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .countdown-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .countdown-timer {
+      font-family: "Syne", sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--gold);
+    }
+
+    /* Order summary */
+    .summary {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .summary-title {
+      font-family: "Syne", sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .summary-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .summary-label {
+      color: var(--muted);
+    }
+
+    .summary-value {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Buttons */
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 150px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-family: "Syne", sans-serif;
+      font-size: 0.94rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #00c4f0);
+      color: #000;
+      box-shadow: 0 4px 15px rgba(0, 229, 180, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 35px rgba(0, 229, 180, 0.4), 0 0 25px rgba(0, 229, 180, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 229, 180, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(0, 229, 180, 0.4);
+      background: rgba(0, 229, 180, 0.06);
+      color: var(--accent);
+    }
+
+    /* Notification toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surf);
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 11px 20px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      z-index: 9999;
+      transform: translateY(100px);
+      transition: transform 0.35s;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    #toast.show {
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .header {
+        padding: 12px 16px;
+      }
+
+      .container {
+        padding: 24px 16px;
+      }
+
+      .payment-card {
+        padding: 24px 16px;
+      }
+
+      .qr-box img {
+        width: 160px;
+        height: 160px;
+      }
+
+      .amount-value {
+        font-size: 1.8rem;
+      }
+
+      .btn {
+        min-width: 120px;
+        padding: 12px 14px;
+        font-size: 0.88rem;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">💳 SmartPrint</div>
+    <button class="header-back" onclick="goBack()">← Kembali</button>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+    <div class="payment-card">
+      <!-- Payment Header -->
+      <div class="payment-header">
+        <span class="payment-label">Konfirmasi Pembayaran</span>
+        <h1 class="payment-title">Invoice Pesanan Kamu</h1>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('qr')">📱 Scan QR</button>
+        <button class="tab-btn" onclick="switchTab('bank')">🏦 Nomor Dana</button>
+      </div>
+
+      <!-- QR Tab -->
+      <div id="qr-tab" class="tab-content active">
+        <div class="qr-section">
+          <div class="qr-label">Scan QRIS Resmi</div>
+          <div class="qr-box">
+            <div class="qr-badge">QRIS</div>
+            <div class="qr-logo">
+              <div class="qr-logo-icon">QR</div>
+              <div class="qr-logo-text">
+                <span class="qr-logo-title">Bayar dengan QRIS</span>
+                <span class="qr-logo-subtitle">Kamera / Aplikasi Dompet Digital</span>
+              </div>
+            </div>
+            <img id="qr-image" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAN4AAADeAQAAAAB6HIMaAAACFElEQVR4nO1YW2rDMBAcPSCfMvQAvUhBvkGPlDP1BvJReoCC9BmQ2TK7NvQjbb9K9yMi2IpFYLKendndIPh27fH7M+BxiF8OIZ3X1DFLAypKS73qSZ3u0EagigiK5HGdhIoJJBH+i+gQLUJYMUKShhEmsC/ACNkjE+JxLw1jzaXlsfoAdHfl4z6ut6e3l3wlb+V8Gu//5v8OIZ28TaQuSZt6najKW59ZtoUQMNb0fqUmAJeOPYSwuIytLY2qiEzUWY5nLmMLYMulTWx5rFmpzM1YPca20xHIUgJmYMENJddfbImWySVN+VBto5idogXq5JbhPfVBXDovRBrh8dWr7VJvjQwO0UYAtxA0wphFUse+bFbneMyywxcqRUw5YDXY9MjbCGzScXtu+4KpVQ0Foav5Ro/1bVLqqoiZLTRh3eiQt1ARaIaQBOCnovisEyDStAivpKtag5qFz94BxgTaAUsvbXaYYs2tO4iKAMXhFDHy1iPazE58gWDLH6+E2ym2bHacakI97EwZa14m4pcJSd+7dbsEyS6YeecSrSaa5dqBVp/7rBhtqfMqJVjr+nWHzmsSkwJWj5Qy9TV/aM9ZzVj3pWYaGTWBXY9XTYC25FaA2XBJ63OHTMjnZpvYbDp6y5gZuTTHE9EKnSldWCtS0/g1/iegn2c1YjrWORMzv/DHhK+awKqGdFV3cKkJ4THJx18x4RP5uaFrxdLRKwAAAABJRU5ErkJggg==" alt="QRIS Code">
+          </div>
+          <div class="qr-footer">Buka aplikasi dompet digital dan arahkan ke kode.</div>
+          <div class="qr-hint">Scan sekarang dengan Dana, GoPay, OVO, ShopeePay, atau M-Banking.</div>
+        </div>
+
+        <div class="methods">
+          <div class="method">📱 Dana</div>
+          <div class="method">🏦 GoPay</div>
+          <div class="method">💳 OVO</div>
+          <div class="method">🛍️ ShopeePay</div>
+          <div class="method">💰 M-Banking</div>
+        </div>
+      </div>
+
+      <!-- Bank Tab -->
+      <div id="bank-tab" class="tab-content">
+        <div class="bank-section">
+          <div class="bank-field">
+            <label class="bank-label">Nomor Dana (Rekening)</label>
+            <div class="bank-number-box">
+              <div class="bank-number" id="bank-number">0858-4131-1310</div>
+              <button class="copy-btn" onclick="copyNumber()">📋 Salin</button>
+            </div>
+          </div>
+          <div class="bank-field">
+            <label class="bank-label">Atas Nama</label>
+            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 0.82rem; color: var(--muted);">
+              SmartPrint Official
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Amount Section -->
+      <div class="amount-section">
+        <div class="amount-label">Total Pembayaran</div>
+        <div class="amount-value" id="amount-display">Rp 1.000</div>
+        <div class="amount-hint">Transfer tepat sesuai nominal di atas</div>
+      </div>
+
+      <!-- Countdown Timer -->
+      <div class="countdown-box">
+        <div class="countdown-label">⏱️ Selesaikan dalam</div>
+        <div class="countdown-timer" id="countdown">15:00</div>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="summary">
+        <div class="summary-title">📋 Ringkasan Pesanan</div>
+        <div class="summary-item">
+          <span class="summary-label">Order ID</span>
+          <span class="summary-value" id="summary-order-id">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Nama</span>
+          <span class="summary-value" id="summary-name">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Telepon</span>
+          <span class="summary-value" id="summary-phone">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">File</span>
+          <span class="summary-value" id="summary-file">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Halaman × Kopi</span>
+          <span class="summary-value" id="summary-pages">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Warna</span>
+          <span class="summary-value" id="summary-color">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Sisi</span>
+          <span class="summary-value" id="summary-side">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Lokasi Pickup</span>
+          <span class="summary-value" id="summary-location">-</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <button class="btn btn-primary" onclick="confirmPayment()">✅ Sudah Bayar</button>
+        <button class="btn btn-secondary" onclick="goBack()">← Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast"></div>
+
+  <script>
+    const DEMO_SAFE_MODE = true;
+    // Color mode and side mode labels
+    const colorLabels = {
+      'color': 'Warna',
+      'bw': 'Hitam Putih'
+    };
+
+    const sideLabels = {
+      'single': 'Satu Sisi',
+      'double': 'Dua Sisi'
+    };
+
+    // Load order data from sessionStorage
+    function loadOrderData() {
+      const orderData = JSON.parse(sessionStorage.getItem('orderData') || '{}');
+      if (!orderData || !orderData.name || !orderData.amount) {
+        showToast('⚠️ Data pesanan tidak ditemukan, kembali ke halaman utama.');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1500);
+        return;
+      }
+      
+      // Update amount
+      const amount = orderData.amount || 1000;
+      const amountText = `Rp ${new Intl.NumberFormat('id-ID').format(amount)}`;
+      document.getElementById('amount-display').textContent = amountText;
+
+      // Update summary
+      document.getElementById('summary-order-id').textContent = orderData.orderId || '-';
+      document.getElementById('summary-name').textContent = orderData.name || '-';
+      document.getElementById('summary-phone').textContent = orderData.phone || '-';
+      document.getElementById('summary-file').textContent = orderData.fileName || '-';
+      document.getElementById('summary-pages').textContent = `${orderData.pages || 1} × ${orderData.copies || 1}`;
+      document.getElementById('summary-color').textContent = colorLabels[orderData.color] || orderData.color || '-';
+      document.getElementById('summary-side').textContent = sideLabels[orderData.side] || orderData.side || '-';
+      document.getElementById('summary-location').textContent = orderData.location || '-';
+
+      // Generate QR code from the official static QR image
+      const staticQrBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAN4AAADeAQAAAAB6HIMaAAACFElEQVR4nO1YW2rDMBAcPSCfMvQAvUhBvkGPlDP1BvJReoCC9BmQ2TK7NvQjbb9K9yMi2IpFYLKendndIPh27fH7M+BxiF8OIZ3X1DFLAypKS73qSZ3u0EagigiK5HGdhIoJJBH+i+gQLUJYMUKShhEmsC/ACNkjE+JxLw1jzaXlsfoAdHfl4z6ut6e3l3wlb+V8Gu//5v8OIZ28TaQuSZt6najKW59ZtoUQMNb0fqUmAJeOPYSwuIytLY2qiEzUWY5nLmMLYMulTWx5rFmpzM1YPca20xHIUgJmYMENJddfbImWySVN+VBto5idogXq5JbhPfVBXDovRBrh8dWr7VJvjQwO0UYAtxA0wphFUse+bFbneMyywxcqRUw5YDXY9MjbCGzScXtu+4KpVQ0Foav5Ro/1bVLqqoiZLTRh3eiQt1ARaIaQBOCnovisEyDStAivpKtag5qFz94BxgTaAUsvbXaYYs2tO4iKAMXhFDHy1iPazE58gWDLH6+E2ym2bHacakI97EwZa14m4pcJSd+7dbsEyS6YeecSrSaa5dqBVp/7rBhtqfMqJVjr+nWHzmsSkwJWj5Qy9TV/aM9ZzVj3pWYaGTWBXY9XTYC25FaA2XBJ63OHTMjnZpvYbDp6y5gZuTTHE9EKnSldWCtS0/g1/iegn2c1YjrWORMzv/DHhK+awKqGdFV3cKkJ4THJx18x4RP5uaFrxdLRKwAAAABJRU5ErkJggg==";
+      const qrImgEl = document.getElementById('qr-image');
+      if (qrImgEl) {
+        qrImgEl.src = staticQrBase64;
+      }
+
+      // Start countdown
+      startCountdown();
+    }
+
+    // Switch between tabs
+    function switchTab(tab) {
+      // Hide all tabs
+      document.getElementById('qr-tab').classList.remove('active');
+      document.getElementById('bank-tab').classList.remove('active');
+
+      // Remove active class from all buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+      // Show selected tab
+      if (tab === 'qr') {
+        document.getElementById('qr-tab').classList.add('active');
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      } else {
+        document.getElementById('bank-tab').classList.add('active');
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      }
+    }
+
+    // Copy to clipboard
+    function copyNumber() {
+      const bankNumber = document.getElementById('bank-number').textContent;
+      if (!navigator.clipboard) {
+        showToast('⚠️ Clipboard tidak tersedia di browser ini');
+        return;
+      }
+      navigator.clipboard.writeText(bankNumber).then(() => {
+        showToast('✅ Nomor tersalin ke clipboard!');
+      }).catch(() => {
+        showToast('❌ Gagal menyalin nomor');
+      });
+    }
+
+    // Countdown timer
+    function startCountdown() {
+      let seconds = 15 * 60; // 15 minutes
+      const timerEl = document.getElementById('countdown');
+
+      const countdown = setInterval(() => {
+        seconds--;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        const display = `${mins}:${secs.toString().padStart(2, '0')}`;
+        timerEl.textContent = display;
+
+        if (seconds <= 0) {
+          clearInterval(countdown);
+          showToast('⏰ Waktu pembayaran habis! Silakan mulai pesanan baru.');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 3000);
+        }
+      }, 1000);
+    }
+
+    // Confirm payment
+    function confirmPayment() {
+      const orderData = JSON.parse(sessionStorage.getItem('orderData') || '{}');
+      if (orderData && orderData.orderId) {
+        localStorage.setItem('sp_last_paid_order', JSON.stringify({
+          orderId: orderData.orderId,
+          amount: orderData.amount || 0,
+          paidAt: new Date().toISOString()
+        }));
+      }
+      showToast('✅ Terima kasih! Admin akan segera memverifikasi pembayaran Anda.');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2000);
+    }
+
+    // Go back to main page
+    function goBack() {
+      if (DEMO_SAFE_MODE || confirm('Kembali akan membatalkan pembayaran. Lanjutkan?')) {
+        window.location.href = 'index.html';
+      }
+    }
+
+    // Show toast notification
+    function showToast(message, duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadOrderData();
+    });
+  </script>
+</body>
+</html>
